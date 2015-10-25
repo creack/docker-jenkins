@@ -1,47 +1,10 @@
-FROM            ubuntu:14.04
+FROM            jenkins:latest
 MAINTAINER      Guillaume J. Charmes <guillaume@charmes.net>
-
-# Install utils
-RUN             apt-get update && apt-get install -y curl wget git unzip && apt-get clean
-
-# Install Jenkins
-RUN             curl http://pkg.jenkins-ci.org/debian/jenkins-ci.org.key | apt-key add -
-
-#RUN echo deb http://archive.ubuntu.com/ubuntu precise universe >> /etc/apt/sources.list
-
-RUN             echo deb http://pkg.jenkins-ci.org/debian binary/ > /etc/apt/sources.list.d/jenkins.list
-
-#RUN mkdir /var/run/jenkins
-
-RUN             apt-get update && apt-get install -y jenkins && apt-get clean
-
-# Install Docker
-RUN             wget -q https://get.docker.io/builds/Linux/x86_64/docker-latest -O /usr/local/bin/docker && \
-                chmod +x /usr/local/bin/docker
-
-# Install Jenkins plugins
-ENV             JENKINS_PLUGINS         scm-api git git-client
-RUN             mkdir /tmp/plugins
-RUN             cd /tmp/plugins && \
-                for plugin in $JENKINS_PLUGINS; do \
-                    echo Installing $plugin; \
-                    wget -q http://updates.jenkins-ci.org/latest/$plugin.hpi; \
-                done
-
-
-# Set basic env
-ENV             HOME            /root
-ENV             JENKINS_HOME    /var/lib/jenkins/.jenkins
-#ENV		PATH		$PATH:/usr/local/bin
-
-EXPOSE          8080
-
-#VOLUME         ["/var/lib/jenkins"]
-
-CMD             mkdir -p $JENKINS_HOME/plugins && \
-                cp /tmp/plugins/* $JENKINS_HOME/plugins/ && \
-                chown -R jenkins $JENKINS_HOME && \
-                java -jar /usr/share/jenkins/jenkins.war
-
-#CMD            ["java", "-jar", "/usr/share/jenkins/jenkins.war"]
-ENV		GIT_SSL_NO_VERIFY	1
+USER            root
+RUN             wget https://get.docker.com/builds/Linux/x86_64/docker-1.8.3 -O /bin/docker && chmod +x /bin/docker
+RUN             groupadd -g 999 docker && usermod -aG docker jenkins
+USER            jenkins
+ENV             PLUGINS "datadog:0.3.0 cobertura:1.9.7 scm-api:0.2 git-client:1.19.0 git:2.4.0 plain-credentials:1.1 github-api:1.69 github:1.14.0 dashboard-view:2.9.6 slack:1.8"
+RUN             for plugin in $PLUGINS; do echo $plugin >> /tmp/baseplugins; done; /usr/local/bin/plugins.sh /tmp/baseplugins
+#ADD             config.json $JENKINS_HOME/.docker/
+#ENV		GIT_SSL_NO_VERIFY	1
